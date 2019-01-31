@@ -46,6 +46,7 @@ def text2html(text):
     lines = map(lambda s: '<p>%s</p>' % s.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;'), filter(lambda s: s.strip() != '', text.split('\n')))
     return ''.join(lines)
 
+
 @asyncio.coroutine
 def cookie2user(cookie_str):
     '''
@@ -97,7 +98,7 @@ def index(request, *, page='1'):
     }
 
 @get('/blog/{id}')
-def get_blog(id):
+def get_blog(id,request):
     blog = yield from Blog.find(id)
     comments = yield from Comment.findAll('blog_id=?', [id], orderBy='created_at desc')
     for c in comments:
@@ -106,7 +107,8 @@ def get_blog(id):
     return {
         '__template__': 'blog.html',
         'blog': blog,
-        'comments': comments
+        'comments': comments,
+        '__user__': request.__user__
     }
 
 @get('/register')
@@ -148,6 +150,7 @@ def authenticate(*, email, passwd):
 
 @get('/signout')
 def signout(request):
+    logging.info(request.headers)
     referer = request.headers.get('Referer')
     r = web.HTTPFound(referer or '/')
     r.set_cookie(COOKIE_NAME, '-deleted-', max_age=0, httponly=True)
@@ -159,40 +162,45 @@ def manage():
     return 'redirect:/manage/comments'
 
 @get('/manage/comments')
-def manage_comments(*, page='1'):
+def manage_comments(request,*, page='1'):
     return {
         '__template__': 'manage_comments.html',
-        'page_index': get_page_index(page)
+        'page_index': get_page_index(page),
+        '__user__': request.__user__
     }
 
 @get('/manage/blogs')
-def manage_blogs(*, page='1'):
+def manage_blogs(request,*, page='1'):
     return {
         '__template__': 'manage_blogs.html',
-        'page_index': get_page_index(page)
+        'page_index': get_page_index(page),
+        '__user__': request.__user__
     }
 
 @get('/manage/blogs/create')
-def manage_create_blog():
+def manage_create_blog(request):
     return {
         '__template__': 'manage_blog_edit.html',
         'id': '',
-        'action': '/api/blogs'
+        'action': '/api/blogs',
+        '__user__':request.__user__
     }
 
 @get('/manage/blogs/edit')
-def manage_edit_blog(*, id):
+def manage_edit_blog(request,*, id):
     return {
         '__template__': 'manage_blog_edit.html',
         'id': id,
-        'action': '/api/blogs/%s' % id
+        'action': '/api/blogs/%s' % id,
+        '__user__': request.__user__
     }
 
 @get('/manage/users')
-def manage_users(*, page='1'):
+def manage_users(request,*, page='1'):
     return {
         '__template__': 'manage_users.html',
-        'page_index': get_page_index(page)
+        'page_index': get_page_index(page),
+        '__user__': request.__user__
     }
 
 @get('/api/comments')
@@ -283,7 +291,6 @@ def api_get_blog(*, id):
 
 @post('/api/blogs')
 def api_create_blog(request, *, name, summary, content):
-    logging.info(request)
     check_admin(request)
     if not name or not name.strip():
         raise APIValueError('name', 'name cannot be empty.')
