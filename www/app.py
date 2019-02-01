@@ -50,7 +50,6 @@ def logger_factory(app, handler):
         # yield from asyncio.sleep(0.3)
         return (await handler(request))
     return logger
-
 @asyncio.coroutine
 def auth_factory(app, handler):
     @asyncio.coroutine
