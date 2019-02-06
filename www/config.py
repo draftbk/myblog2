@@ -16,7 +16,6 @@ class Dict(dict):
         super(Dict, self).__init__(**kw)
         for k, v in zip(names, values):
             self[k] = v
-
     def __getattr__(self, key):
         try:
             return self[key]
